@@ -1,14 +1,27 @@
 ---
-title: "01. Exploratory Data Analysis"
+title: "Exploratory Data Analysis"
 author: "Jin-Hoon An"
-date: '2017 11 29 '
-output: html_document
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    code_folding: show
+    fig_caption: yes
+    fig_height: 4.5
+    highlight: tango
+    keep_md: yes
+    number_sections: yes
+    theme: cosmo
+    toc: yes
+  md_document:
+    variant: markdown_github
 mainfont: AppleGothic
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+## Exploring Categorical Data
 
 <!-- RMD 설정 -->
 ```{r, include=F}
@@ -29,6 +42,8 @@ library(boot)
 library(rpart)
 library(hacktoolkit)
 library(ROCR)
+library(fivethirtyeight)
+library(stringr)
 ```
 
 ### Contingency table review
@@ -51,14 +66,115 @@ The dataset has been loaded into your workspace as `comics`.
 
 ```{r}
 # Print the first rows of the data
-#comics
+data("comic_characters")
+comics <- comic_characters
+glimpse(comics)
+names(comics)[9] = "gender"
+names(comics)[13] = "first_appear"
+
+# table(comics$id)
+# table(comics$align)
+# table(comics$eye)
+# table(comics$hair)
+# table(comics$gender)
+# table(comics$gsm)
+# table(comics$alive)
+
+# Data 정리
+comics$id <- str_replace_all(comics$id, " Identity", "")
+comics$align <- str_replace_all(comics$align, " Characters", "")
+comics$eye <- str_replace_all(comics$eye, " Eyes", "")
+comics$hair <- str_replace_all(comics$hair, " Hair", "")
+comics$gender <- str_replace_all(comics$gender, " Characters", "")
+comics$gender <- str_replace_all(comics$gender,"Agender", "Other")
+comics$gender <- str_replace_all(comics$gender,"Genderless", "Other")
+comics$gender <- str_replace_all(comics$gender,"Genderfluid", "Other")
+comics$gender <- str_replace_all(comics$gender,"Transgender", "Other")
+comics$gsm <- str_replace_all(comics$gsm, " Characters", "")
+comics$alive <- str_replace_all(comics$alive, " Characters", "")
+
+# factor type으로 변환
+comics$gender <- as.factor(comics$gender)
+comics$publisher <- as.factor(comics$publisher)
+comics$page_id <- as.factor(comics$page_id)
+comics$name <- as.factor(comics$page_id)
+comics$urlslug <- as.factor(comics$urlslug)
+comics$id <- as.factor(comics$id)
+comics$align <- as.factor(comics$align)
+comics$eye <- as.factor(comics$eye)
+comics$hair <- as.factor(comics$hair)
+comics$gsm <- as.factor(comics$gsm)
+comics$alive <- as.factor(comics$alive)
+comics$first_appear <- as.factor(comics$first_appear)
+
+# Print the first rows of the data
+comics
 
 # Check levels of align
-#levels(comics$align)
+levels(comics$align)
 
 # Check the levels of gender
-#levels(comics$gender)
+levels(comics$gender)
 
 # Create a 2-way contingency table
-#table(comics$align, comics$gender)
+tab <- table(comics$align, comics$gender)
 ```
+
+### Dropping levels
+
+> Excercise
+
+The contingency table from the last exercise revealed that there are some levels that have very low counts. To simplify the analysis, it often helps to drop such levels.
+
+In R, this requires two steps: first filtering out any rows with the levels that have very low counts, then removing these levels from the factor variable with `droplevels()`. This is because the `droplevels()` function would keep levels that have just 1 or 2 counts; it only drops levels that don't exist in a dataset.
+
+> Instructions
+
+The contingency table from the last exercise is available in your workspace as `tab`.
+
+- Load the `dplyr` package.
+- Print `tab` to find out which level of `align` has the fewest total entries.
+- Use `filter()` to filter out all rows of `comics` with that level, then drop the unused level with `droplevels()`. Save the simplifed dataset over the old one as `comics`.
+
+```{r}
+# Load dplyr
+#library(dplyr)
+
+# Print tab
+tab
+
+# Remove align level
+comics <- comics %>%
+  filter(align != "Reformed Criminals") %>%
+  droplevels()
+```
+
+### Side-by-side barcharts
+
+> Excercise
+
+While a contingency table represents the counts numerically, it's often more useful to represent them graphically.
+
+Here you'll construct two side-by-side barcharts of the `comics` data. This shows that there can often be two or more options for presenting the same data. Passing the argument `position = "dodge"` to `geom_bar()` says that you want a side-by-side (i.e. not stacked) barchart.
+
+> Instructions
+
+- Load the `ggplot2` package.
+- Create a side-by-side barchart with `align` on the x-axis and `gender` as the `fill` aesthetic.
+- Create another side-by-side barchart with `gender` on the x-axis and `align` as the `fill` aesthetic. Rotate the axis labels 90 degrees to help readability.
+
+```{r}
+# Load ggplot2
+library(ggplot2)
+
+# Create side-by-side barchart of gender by alignment
+ggplot(comics, aes(x = align, fill = gender)) + 
+  geom_bar(position = "dodge")
+
+# Create side-by-side barchart of alignment by gender
+ggplot(comics, aes(x = gender, fill = align)) + 
+  geom_bar(position = "dodge") +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+
